@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from inspect import getclosurevars, getfile, getmodule, getsource
 from typing import Any, Callable, Dict, Type
 import functools
+import inspect
+import logging
 
 def step_decorator(f):
     f.is_step_decorator = True
@@ -167,15 +169,22 @@ class StepBodyRewriter(NodeTransformer):
         If the name resolves to a ContextKey, rewrite it as a subscript
         of the `context`.
         """
+        sig = inspect.signature(self.f)
         resolved = self.step_globals.get(node.id, None)
+        
         if resolved is not None and isinstance(resolved, ContextKey):
-            return fix_missing_locations(copy_location(Subscript(
-                value=Name(id="context", ctx=Load()),
-                slice=Index(value=Name(id=node.id, ctx=Load())),
-                ctx=node.ctx
-            ), node))
+            if node.id in sig.parameters:
+                logging.info(" '" + str(node.id) + "' skipped in context[] map, called from " + str(self.f))
+                return node
+            else:
+                return fix_missing_locations(copy_location(Subscript(
+                    value=Name(id="context", ctx=Load()),
+                    slice=Index(value=Name(id=node.id, ctx=Load())),
+                    ctx=node.ctx
+                ), node))
         else:
             return node
+        
         
     def visit_Attribute(self, node):
         node.value = self.visit(node.value)
