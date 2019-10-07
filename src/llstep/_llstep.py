@@ -59,7 +59,6 @@ class Step:
     def __call__(self, context: Context, *args, **kwargs):
         if self.f is None:
             self.rewrite()
-        print(f"Context: {context}, {args}, {kwargs}")
         self.f(context, *args, **kwargs)
 
     def rewrite(self):
